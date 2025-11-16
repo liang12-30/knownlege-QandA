@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>金融多模态知识库问答系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 900px;
+            padding: 40px;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.online {
+            background-color: #52c41a;
+        }
+
+        .status-indicator.offline {
+            background-color: #f5222d;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .question-section {
+            margin-bottom: 30px;
+        }
+
+        .question-label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .question-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 15px;
+            transition: all 0.3s;
+            resize: vertical;
+            min-height: 60px;
+            font-family: inherit;
+        }
+
+        .question-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #666;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #e0e0e0;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .result-section {
+            display: none;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        .result-section.active {
+            display: block;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .result-question {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .result-meta {
+            display: flex;
+            gap: 20px;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .knowledge-points {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .knowledge-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            border-left: 4px solid #667eea;
+            transition: all 0.3s;
+        }
+
+        .knowledge-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .knowledge-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .knowledge-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .knowledge-score {
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .knowledge-content {
+            color: #555;
+            line-height: 1.8;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .error-message {
+            background: #fff1f0;
+            border: 1px solid #ffccc7;
+            border-radius: 10px;
+            padding: 15px;
+            color: #cf1322;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .error-message.active {
+            display: block;
+        }
+
+        .example-questions {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f0f2f5;
+            border-radius: 10px;
+        }
+
+        .example-questions h3 {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .example-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .example-tag {
+            background: white;
+            color: #667eea;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid #e0e0e0;
+        }
+
+        .example-tag:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 22px;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .result-meta {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💰 金融多模态知识库问答系统</h1>
+            <p>
+                <span class="status-indicator" id="statusIndicator"></span>
+                <span id="statusText">检查服务状态...</span>
+            </p>
+        </div>
+
+        <div class="error-message" id="errorMessage"></div>
+
+        <div class="question-section">
+            <label class="question-label">请输入您的问题：</label>
+            <textarea 
+                class="question-input" 
+                id="questionInput" 
+                placeholder="例如：请详细说明掌上银行中“基金”功能的主要服务内容以及进行基金认购的具体操作流程。"
+                rows="3"
+            ></textarea>
+        </div>
+
+        <div class="button-group">
+            <button class="btn btn-primary" id="submitBtn" onclick="submitQuestion()">
+                <span>🔍</span>
+                <span>提交问题</span>
+            </button>
+            <button class="btn btn-secondary" id="clearBtn" onclick="clearResult()">
+                <span>🗑️</span>
+                <span>清空结果</span>
+            </button>
+        </div>
+
+        <div class="example-questions">
+            <h3>💡 示例问题（点击快速填充）：</h3>
+            <div class="example-tags">
+                <span class="example-tag" onclick="fillExample('请详细说明掌上银行中“基金”功能的主要服务内容以及进行基金认购的具体操作流程。')">请详细说明掌上银行中“基金”功能的主要服务内容以及进行基金认购的具体操作流程。</span>
+                <span class="example-tag" onclick="fillExample('请总结建行网银盾使用手册中第一部分“重点注意事项”的主要内容。')">请总结建行网银盾使用手册中第一部分“重点注意事项”的主要内容。</span>
+                <span class="example-tag" onclick="fillExample('总结一下企业网银的主要功能')">企业网银功能</span>
+                <span class="example-tag" onclick="fillExample('中国太保2023年业绩如何？')">太保业绩查询</span>
+                <span class="example-tag" onclick="fillExample('如何办理信用卡？')">信用卡办理</span>
+            </div>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>正在智能检索知识库...</p>
+        </div>
+
+        <div class="result-section" id="resultSection">
+            <div class="result-header">
+                <div class="result-question" id="resultQuestion"></div>
+                <div class="result-meta">
+                    <div class="meta-item">
+                        <span>📊 意图类型：</span>
+                        <span id="resultIntent"></span>
+                    </div>
+                    <div class="meta-item">
+                        <span>📚 知识点数：</span>
+                        <span id="resultCount"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="knowledge-points" id="knowledgePoints"></div>
+        </div>
+    </div>
+
+    <script>
+        // API 配置
+        const API_BASE_URL = 'http://localhost:8000';
+
+        // 页面加载时检查服务状态
+        window.addEventListener('DOMContentLoaded', checkHealth);
+
+        // 检查服务健康状态
+        async function checkHealth() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/health`);
+                const data = await response.json();
+                
+                const statusIndicator = document.getElementById('statusIndicator');
+                const statusText = document.getElementById('statusText');
+                
+                if (data.ready) {
+                    statusIndicator.className = 'status-indicator online';
+                    statusText.textContent = '服务在线';
+                } else {
+                    statusIndicator.className = 'status-indicator offline';
+                    statusText.textContent = '服务未就绪';
+                }
+            } catch (error) {
+                const statusIndicator = document.getElementById('statusIndicator');
+                const statusText = document.getElementById('statusText');
+                statusIndicator.className = 'status-indicator offline';
+                statusText.textContent = '无法连接到服务';
+                showError('无法连接到后端服务，请确保 API 服务已启动（运行 python api_server.py）');
+            }
+        }
+
+        // 显示错误消息
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.classList.add('active');
+            
+            // 3秒后自动隐藏
+            setTimeout(() => {
+                errorDiv.classList.remove('active');
+            }, 5000);
+        }
+
+        // 填充示例问题
+        function fillExample(question) {
+            document.getElementById('questionInput').value = question;
+            document.getElementById('questionInput').focus();
+        }
+
+        // 提交问题
+        async function submitQuestion() {
+            const questionInput = document.getElementById('questionInput');
+            const question = questionInput.value.trim();
+
+            if (!question) {
+                showError('请输入问题！');
+                return;
+            }
+
+            // 显示加载状态
+            const loading = document.getElementById('loading');
+            const resultSection = document.getElementById('resultSection');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            loading.classList.add('active');
+            resultSection.classList.remove('active');
+            submitBtn.disabled = true;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/answer`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ question: question })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                displayResult(data);
+            } catch (error) {
+                console.error('Error:', error);
+                showError(`请求失败: ${error.message}`);
+            } finally {
+                loading.classList.remove('active');
+                submitBtn.disabled = false;
+            }
+        }
+
+        // 显示结果
+        function displayResult(data) {
+            const resultSection = document.getElementById('resultSection');
+            const resultQuestion = document.getElementById('resultQuestion');
+            const resultIntent = document.getElementById('resultIntent');
+            const resultCount = document.getElementById('resultCount');
+            const knowledgePoints = document.getElementById('knowledgePoints');
+
+            // 设置问题和元数据
+            resultQuestion.textContent = `问题：${data.question}`;
+            resultIntent.textContent = getIntentLabel(data.intent);
+            resultCount.textContent = data.knowledge_points.length;
+
+            // 清空之前的知识点
+            knowledgePoints.innerHTML = '';
+
+            // 添加知识点卡片
+            data.knowledge_points.forEach((kp, index) => {
+                const card = document.createElement('div');
+                card.className = 'knowledge-card';
+                
+                // 计算模拟的相关度分数（实际应该从后端返回）
+                const score = (100 - index * 5).toFixed(1);
+                
+                card.innerHTML = `
+                    <div class="knowledge-header">
+                        <div class="knowledge-title">📌 知识点 ${index + 1}</div>
+                        <div class="knowledge-score">相关度: ${score}%</div>
+                    </div>
+                    <div class="knowledge-content">${escapeHtml(kp)}</div>
+                `;
+                
+                knowledgePoints.appendChild(card);
+            });
+
+            // 显示结果区域
+            resultSection.classList.add('active');
+            
+            // 平滑滚动到结果区域
+            resultSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        // 获取意图类型的中文标签
+        function getIntentLabel(intent) {
+            const intentMap = {
+                'query': '普通查询',
+                'multi_intent': '多意图问题',
+                'reasoning': '推理问题',
+                'summary': '摘要问题',
+                'financial': '金融计算'
+            };
+            return intentMap[intent] || intent;
+        }
+
+        // HTML 转义
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 清空结果
+        function clearResult() {
+            document.getElementById('questionInput').value = '';
+            document.getElementById('resultSection').classList.remove('active');
+            document.getElementById('errorMessage').classList.remove('active');
+        }
+
+        // 回车提交（Ctrl+Enter 或 Cmd+Enter）
+        document.getElementById('questionInput').addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                submitQuestion();
+            }
+        });
+    </script>
+</body>
+</html>
+
